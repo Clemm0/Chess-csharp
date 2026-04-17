@@ -12,3 +12,4 @@ C:\Users\Clemente\Documents\C#\Chess-csharp\obj\Debug\net8.0-windows\refint\Ches
 C:\Users\Clemente\Documents\C#\Chess-csharp\obj\Debug\net8.0-windows\ChessGame.pdb
 C:\Users\Clemente\Documents\C#\Chess-csharp\obj\Debug\net8.0-windows\ChessGame.genruntimeconfig.cache
 C:\Users\Clemente\Documents\C#\Chess-csharp\obj\Debug\net8.0-windows\ref\ChessGame.dll
+C:\Users\Clemente\Documents\C#\Chess-csharp\obj\Debug\net8.0-windows\ChessGame.sourcelink.json

@@ -43,10 +43,6 @@ namespace ChessGame
 
         public ChessForm()
         {
-            this.TopMost = false;
-            this.WindowState = FormWindowState.Normal;
-            this.ShowInTaskbar = true;
-            
             this.Text = "Scacchi";
             this.KeyPreview = true;
             this.KeyDown += ChessForm_KeyDown;
@@ -54,27 +50,19 @@ namespace ChessGame
             InitializeForm();
             NewGame();
             
-            // Load icon from Images folder
             LoadIconFromFile();
-            
-            this.Show();
-            this.BringToFront();
-            this.Focus();
         }
 
         private void LoadIconFromFile()
         {
             try
             {
-                // Check multiple possible paths for the icon
                 string[] possiblePaths = new string[]
                 {
                     Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Images", "icon.ico"),
                     Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Images", "icon.png"),
                     Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "icon.ico"),
                     Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "icon.png"),
-                    Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "..", "..", "..", "Images", "icon.ico"),
-                    Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "..", "..", "..", "Images", "icon.png"),
                 };
                 
                 foreach (string iconPath in possiblePaths)
@@ -357,7 +345,6 @@ namespace ChessGame
             blackScore = 0;
             isAIMode = false;
             currentValidMoves = null;
-            board.ClearEnPassant();
             UpdateBoardDisplay();
             UpdateStatus();
             UpdateMoveHistory();
@@ -536,29 +523,7 @@ namespace ChessGame
                 if (isAIThinking)
                 {
                     isAIThinking = false;
-                    bool isCheck = validator.IsKingInCheck(PieceColor.Black);
-                    bool hasMoves = validator.HasAnyLegalMove(PieceColor.Black);
-                    
-                    if (!hasMoves)
-                    {
-                        gameOver = true;
-                        if (isCheck)
-                        {
-                            statusLabel.Text = "SCACCO MATTO! Bianco vince! (IA timeout)";
-                            MessageBox.Show("L'IA ha impiegato troppo tempo! SCACCO MATTO dichiarato!", "Game Over", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                        }
-                        else
-                        {
-                            statusLabel.Text = "STALLO! Partita patta! (IA timeout)";
-                            MessageBox.Show("L'IA ha impiegato troppo tempo! STALLO dichiarato!", "Game Over", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                        }
-                    }
-                    else
-                    {
-                        statusLabel.Text = "L'IA sta impiegando troppo tempo, mossa casuale...";
-                        Application.DoEvents();
-                        MakeRandomAIMove();
-                    }
+                    MakeRandomAIMove();
                 }
             }
         }
@@ -606,43 +571,28 @@ namespace ChessGame
             Piece movedPiece = board.Squares[startRow, startCol];
             Piece capturedPiece = board.Squares[endRow, endCol];
             
-            if (capturedPiece != null)
-            {
-                int pieceValue = GetPieceValue(capturedPiece.Type);
-                if (currentPlayer == PieceColor.White)
-                    whiteScore += pieceValue;
-                else
-                    blackScore += pieceValue;
-                UpdateScore();
-            }
-            
             Move move = new Move(startRow, startCol, endRow, endCol, movedPiece, capturedPiece);
             
-            // EN PASSANT FIX - Complete rewrite
+            // EN PASSANT - Cattura
             if (movedPiece.Type == PieceType.Pawn && Math.Abs(endCol - startCol) == 1 && capturedPiece == null)
             {
-                // Check if there's an en passant target
-                if (board.EnPassantTargetRow.HasValue && board.EnPassantTargetCol.HasValue)
+                if (board.EnPassantRow.HasValue && board.EnPassantCol.HasValue)
                 {
-                    // The pawn must capture by moving to the en passant target square
-                    if (endRow == board.EnPassantTargetRow.Value && endCol == board.EnPassantTargetCol.Value)
+                    if (endRow == board.EnPassantRow.Value && endCol == board.EnPassantCol.Value)
                     {
-                        // Find the opponent pawn that just moved two squares
                         int direction = currentPlayer == PieceColor.White ? -1 : 1;
-                        int opponentPawnRow = endRow - direction;
+                        int opponentRow = endRow - direction;
                         
-                        if (opponentPawnRow >= 0 && opponentPawnRow < 8)
+                        if (opponentRow >= 0 && opponentRow < 8)
                         {
-                            Piece opponentPawn = board.Squares[opponentPawnRow, endCol];
+                            Piece opponentPawn = board.Squares[opponentRow, endCol];
                             if (opponentPawn != null && opponentPawn.Type == PieceType.Pawn && opponentPawn.Color != currentPlayer)
                             {
                                 move.IsEnPassant = true;
-                                move.EnPassantPawnRow = opponentPawnRow;
+                                move.EnPassantPawnRow = opponentRow;
                                 move.EnPassantPawnCol = endCol;
-                                // Remove the captured pawn
-                                board.Squares[opponentPawnRow, endCol] = null;
+                                board.Squares[opponentRow, endCol] = null;
                                 
-                                // Add score for captured pawn
                                 if (currentPlayer == PieceColor.White)
                                     whiteScore += 10;
                                 else
@@ -654,12 +604,12 @@ namespace ChessGame
                 }
             }
             
-            // Execute move
+            // Esegui movimento
             board.Squares[endRow, endCol] = movedPiece;
             board.Squares[startRow, startCol] = null;
             movedPiece.HasMoved = true;
             
-            // Handle castling
+            // Arrocco
             if (movedPiece.Type == PieceType.King && Math.Abs(endCol - startCol) == 2)
             {
                 move.IsCastling = true;
@@ -678,35 +628,41 @@ namespace ChessGame
                 }
             }
             
-            // Handle pawn promotion with user choice
+            // Promozione
             if (movedPiece.Type == PieceType.Pawn && (endRow == 0 || endRow == 7))
             {
                 PieceType selectedPromotion = ShowPromotionDialog();
                 move.PromotionPiece = selectedPromotion;
                 board.Squares[endRow, endCol] = new Piece(selectedPromotion, currentPlayer);
             }
-            else if (promotionPiece != PieceType.None)
-            {
-                move.PromotionPiece = promotionPiece;
-                board.Squares[endRow, endCol] = new Piece(promotionPiece, currentPlayer);
-            }
             
             moveHistory.Add(move);
             undoneMoves.Clear();
             
-            // Clear en passant target AFTER the move (ghost pawn disappears)
-            board.ClearEnPassant();
+            // ✅ FIX: Set en passant target here (after execution), never in the validator.
+            // If this move was a pawn double-push, store the skipped square as the en passant target.
+            // For every other move, clear it so it expires after one turn.
+            if (movedPiece.Type == PieceType.Pawn && Math.Abs(endRow - startRow) == 2)
+            {
+                int direction = currentPlayer == PieceColor.White ? -1 : 1;
+                board.SetEnPassant(startRow + direction, startCol, currentPlayer);
+            }
+            else
+            {
+                board.ClearEnPassant();
+            }
             
             UpdateBoardDisplay();
             
-            // Check for checkmate
-            bool isCheck = validator.IsKingInCheck(currentPlayer);
-            bool hasMoves = validator.HasAnyLegalMove(currentPlayer);
+            // Controllo fine partita
+            PieceColor nextPlayer = currentPlayer == PieceColor.White ? PieceColor.Black : PieceColor.White;
+            bool isCheck = validator.IsKingInCheck(nextPlayer);
+            bool hasMoves = validator.HasAnyLegalMove(nextPlayer);
             
             if (isCheck && !hasMoves)
             {
                 gameOver = true;
-                string winner = currentPlayer == PieceColor.White ? "Nero" : "Bianco";
+                string winner = currentPlayer == PieceColor.White ? "Bianco" : "Nero";
                 statusLabel.Text = $"SCACCO MATTO! {winner} vince!";
                 MessageBox.Show($"SCACCO MATTO! {winner} vince!", "Game Over", MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
@@ -718,7 +674,7 @@ namespace ChessGame
             }
             else
             {
-                currentPlayer = currentPlayer == PieceColor.White ? PieceColor.Black : PieceColor.White;
+                currentPlayer = nextPlayer;
                 UpdateStatus();
             }
             
@@ -864,12 +820,6 @@ namespace ChessGame
                 var (startRow, startCol, endRow, endCol, promotionPiece) = bestMove.Value;
                 ExecuteMove(startRow, startCol, endRow, endCol, promotionPiece);
             }
-            else if (!validator.HasAnyLegalMove(PieceColor.Black))
-            {
-                gameOver = true;
-                statusLabel.Text = "SCACCO MATTO! Bianco vince!";
-                MessageBox.Show("SCACCO MATTO! Bianco vince!", "Game Over", MessageBoxButtons.OK, MessageBoxIcon.Information);
-            }
         }
 
         private void UndoLastMove()
@@ -946,41 +896,44 @@ namespace ChessGame
             foreach (var move in moveHistory)
             {
                 Piece movedPiece = board.Squares[move.StartRow, move.StartCol];
-                board.Squares[move.EndRow, move.EndCol] = movedPiece;
-                board.Squares[move.StartRow, move.StartCol] = null;
-                movedPiece.HasMoved = true;
-                
-                if (move.CapturedPiece != null)
+                if (movedPiece != null)
                 {
-                    if (move.MovedPiece.Color == PieceColor.White)
-                        whiteScore += GetPieceValue(move.CapturedPiece.Type);
-                    else
-                        blackScore += GetPieceValue(move.CapturedPiece.Type);
-                }
-                
-                if (move.IsCastling)
-                {
-                    Piece rook = board.Squares[move.RookStartRow, move.RookStartCol];
-                    if (rook != null)
+                    board.Squares[move.EndRow, move.EndCol] = movedPiece;
+                    board.Squares[move.StartRow, move.StartCol] = null;
+                    movedPiece.HasMoved = true;
+                    
+                    if (move.CapturedPiece != null)
                     {
-                        board.Squares[move.RookEndRow, move.RookEndCol] = rook;
-                        board.Squares[move.RookStartRow, move.RookStartCol] = null;
-                        rook.HasMoved = true;
+                        if (move.MovedPiece.Color == PieceColor.White)
+                            whiteScore += GetPieceValue(move.CapturedPiece.Type);
+                        else
+                            blackScore += GetPieceValue(move.CapturedPiece.Type);
                     }
-                }
-                
-                if (move.PromotionPiece != PieceType.None)
-                {
-                    board.Squares[move.EndRow, move.EndCol] = new Piece(move.PromotionPiece, movedPiece.Color);
-                }
-                
-                if (move.IsEnPassant)
-                {
-                    board.Squares[move.EnPassantPawnRow, move.EnPassantPawnCol] = null;
-                    if (move.MovedPiece.Color == PieceColor.White)
-                        whiteScore += 10;
-                    else
-                        blackScore += 10;
+                    
+                    if (move.IsCastling)
+                    {
+                        Piece rook = board.Squares[move.RookStartRow, move.RookStartCol];
+                        if (rook != null)
+                        {
+                            board.Squares[move.RookEndRow, move.RookEndCol] = rook;
+                            board.Squares[move.RookStartRow, move.RookStartCol] = null;
+                            rook.HasMoved = true;
+                        }
+                    }
+                    
+                    if (move.PromotionPiece != PieceType.None)
+                    {
+                        board.Squares[move.EndRow, move.EndCol] = new Piece(move.PromotionPiece, movedPiece.Color);
+                    }
+                    
+                    if (move.IsEnPassant)
+                    {
+                        board.Squares[move.EnPassantPawnRow, move.EnPassantPawnCol] = null;
+                        if (move.MovedPiece.Color == PieceColor.White)
+                            whiteScore += 10;
+                        else
+                            blackScore += 10;
+                    }
                 }
             }
             UpdateScore();
@@ -1000,12 +953,11 @@ namespace ChessGame
                 
                 if (saveDialog.ShowDialog() == DialogResult.OK)
                 {
-                    // Create a serializable snapshot using simple lists instead of 2D arrays
                     var saveData = new
                     {
                         BoardData = SerializeBoardAsList(),
-                        EnPassantTargetRow = board.EnPassantTargetRow,
-                        EnPassantTargetCol = board.EnPassantTargetCol,
+                        EnPassantRow = board.EnPassantRow,
+                        EnPassantCol = board.EnPassantCol,
                         CurrentPlayer = currentPlayer.ToString(),
                         IsAIMode = isAIMode,
                         WhiteScore = whiteScore,
@@ -1084,10 +1036,10 @@ namespace ChessGame
                     
                     if (saveData != null)
                     {
-                        // Create new board
+                        // Nuovo board
                         board = new Board();
                         
-                        // Restore board from list
+                        // Carica board
                         var boardData = JsonSerializer.Deserialize<List<object>>(saveData["BoardData"].ToString());
                         foreach (var item in boardData)
                         {
@@ -1100,14 +1052,19 @@ namespace ChessGame
                             board.Squares[row, col] = new Piece(type, color) { HasMoved = hasMoved };
                         }
                         
-                        board.EnPassantTargetRow = saveData.ContainsKey("EnPassantTargetRow") ? Convert.ToInt32(saveData["EnPassantTargetRow"]) : (int?)null;
-                        board.EnPassantTargetCol = saveData.ContainsKey("EnPassantTargetCol") ? Convert.ToInt32(saveData["EnPassantTargetCol"]) : (int?)null;
+                        // Carica en passant
+                        if (saveData.ContainsKey("EnPassantRow") && saveData["EnPassantRow"] != null)
+                            board.EnPassantRow = Convert.ToInt32(saveData["EnPassantRow"]);
+                        if (saveData.ContainsKey("EnPassantCol") && saveData["EnPassantCol"] != null)
+                            board.EnPassantCol = Convert.ToInt32(saveData["EnPassantCol"]);
+                        
+                        // Carica stato gioco
                         currentPlayer = (PieceColor)Enum.Parse(typeof(PieceColor), saveData["CurrentPlayer"].ToString());
                         isAIMode = Convert.ToBoolean(saveData["IsAIMode"]);
                         whiteScore = Convert.ToInt32(saveData["WhiteScore"]);
                         blackScore = Convert.ToInt32(saveData["BlackScore"]);
                         
-                        // Restore move history
+                        // Carica storico mosse
                         moveHistory = new List<Move>();
                         var moveDataList = JsonSerializer.Deserialize<List<object>>(saveData["MoveHistoryData"].ToString());
                         foreach (var moveItem in moveDataList)
@@ -1130,6 +1087,7 @@ namespace ChessGame
                             moveHistory.Add(move);
                         }
                         
+                        // Ricrea validator e AI
                         validator = new MoveValidator(board);
                         ai = new AIOpponent();
                         gameOver = false;
@@ -1138,6 +1096,7 @@ namespace ChessGame
                         undoneMoves = new List<Move>();
                         currentValidMoves = null;
                         
+                        // Aggiorna UI
                         aiModeButton.Text = isAIMode ? "🤖 Modalità IA: ON" : "🤖 Modalità IA: OFF";
                         aiModeButton.BackColor = isAIMode ? Color.FromArgb(76, 175, 80) : Color.FromArgb(255, 152, 0);
                         

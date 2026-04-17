@@ -5,16 +5,18 @@ namespace ChessGame
     public class Board
     {
         public Piece[,] Squares { get; private set; }
-        public int? EnPassantTargetRow { get; set; }
-        public int? EnPassantTargetCol { get; set; }
-        public PieceColor? LastPawnDoubleMoveColor { get; set; }
-        public bool IsEnPassantAvailable { get; set; } // Ghost pawn flag
+        
+        public int? EnPassantRow { get; set; }
+        public int? EnPassantCol { get; set; }
+        public PieceColor? EnPassantColor { get; set; }
+        public bool IsEnPassantAvailable { get; set; }
 
         public Board()
         {
             Squares = new Piece[8, 8];
-            EnPassantTargetRow = null;
-            EnPassantTargetCol = null;
+            EnPassantRow = null;
+            EnPassantCol = null;
+            EnPassantColor = null;
             IsEnPassantAvailable = false;
             InitializeBoard();
         }
@@ -30,9 +32,9 @@ namespace ChessGame
                             HasMoved = other.Squares[i, j].HasMoved
                         };
             
-            EnPassantTargetRow = other.EnPassantTargetRow;
-            EnPassantTargetCol = other.EnPassantTargetCol;
-            LastPawnDoubleMoveColor = other.LastPawnDoubleMoveColor;
+            EnPassantRow = other.EnPassantRow;
+            EnPassantCol = other.EnPassantCol;
+            EnPassantColor = other.EnPassantColor;
             IsEnPassantAvailable = other.IsEnPassantAvailable;
         }
 
@@ -63,12 +65,20 @@ namespace ChessGame
             Squares[7, 7] = new Piece(PieceType.Rook, PieceColor.White);
         }
         
+        public void SetEnPassant(int row, int col, PieceColor color)
+        {
+            EnPassantRow = row;
+            EnPassantCol = col;
+            EnPassantColor = color;
+            IsEnPassantAvailable = true;
+        }
+
         public void ClearEnPassant()
         {
-            EnPassantTargetRow = null;
-            EnPassantTargetCol = null;
+            EnPassantRow = null;
+            EnPassantCol = null;
+            EnPassantColor = null;
             IsEnPassantAvailable = false;
-            LastPawnDoubleMoveColor = null;
         }
     }
 }

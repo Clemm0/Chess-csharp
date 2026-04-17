@@ -40,99 +40,7 @@ namespace ChessGame
             return !WouldBeInCheck(startRow, startCol, endRow, endCol, currentPlayer);
         }
 
-        public List<(int row, int col)> GetValidMovesForPiece(int row, int col, PieceColor color)
-        {
-            var validMoves = new List<(int, int)>();
-            for (int endRow = 0; endRow < 8; endRow++)
-            {
-                for (int endCol = 0; endCol < 8; endCol++)
-                {
-                    if (IsValidMove(row, col, endRow, endCol, color, out _))
-                    {
-                        validMoves.Add((endRow, endCol));
-                    }
-                }
-            }
-            return validMoves;
-        }
-
-        public bool HasAnyLegalMove(PieceColor color)
-        {
-            for (int startRow = 0; startRow < 8; startRow++)
-            {
-                for (int startCol = 0; startCol < 8; startCol++)
-                {
-                    Piece piece = board.Squares[startRow, startCol];
-                    if (piece != null && piece.Color == color)
-                    {
-                        for (int endRow = 0; endRow < 8; endRow++)
-                        {
-                            for (int endCol = 0; endCol < 8; endCol++)
-                            {
-                                if (IsValidMove(startRow, startCol, endRow, endCol, color, out _))
-                                    return true;
-                            }
-                        }
-                    }
-                }
-            }
-            return false;
-        }
-
-        public bool IsKingInCheck(PieceColor color)
-        {
-            int kingRow = -1, kingCol = -1;
-            for (int row = 0; row < 8; row++)
-            {
-                for (int col = 0; col < 8; col++)
-                {
-                    Piece piece = board.Squares[row, col];
-                    if (piece != null && piece.Type == PieceType.King && piece.Color == color)
-                    {
-                        kingRow = row;
-                        kingCol = col;
-                        break;
-                    }
-                }
-            }
-
-            PieceColor opponent = color == PieceColor.White ? PieceColor.Black : PieceColor.White;
-            for (int row = 0; row < 8; row++)
-            {
-                for (int col = 0; col < 8; col++)
-                {
-                    Piece piece = board.Squares[row, col];
-                    if (piece != null && piece.Color == opponent)
-                    {
-                        if (IsValidMoveWithoutCheck(row, col, kingRow, kingCol, opponent))
-                            return true;
-                    }
-                }
-            }
-            return false;
-        }
-
-        public bool IsValidMoveWithoutCheck(int startRow, int startCol, int endRow, int endCol, PieceColor currentPlayer)
-        {
-            Piece piece = board.Squares[startRow, startCol];
-            if (piece == null || piece.Color != currentPlayer)
-                return false;
-
-            Piece targetPiece = board.Squares[endRow, endCol];
-            if (targetPiece != null && targetPiece.Color == currentPlayer)
-                return false;
-
-            return piece.Type switch
-            {
-                PieceType.Pawn => IsValidPawnMove(startRow, startCol, endRow, endCol, piece.Color, targetPiece, out _),
-                PieceType.Knight => IsValidKnightMove(startRow, startCol, endRow, endCol),
-                PieceType.Bishop => IsValidBishopMove(startRow, startCol, endRow, endCol),
-                PieceType.Rook => IsValidRookMove(startRow, startCol, endRow, endCol),
-                PieceType.Queen => IsValidQueenMove(startRow, startCol, endRow, endCol),
-                PieceType.King => IsValidKingMove(startRow, startCol, endRow, endCol, currentPlayer),
-                _ => false
-            };
-        }
+        // ==================== METODI PER I PEDONI ====================
 
         private bool IsValidPawnMove(int startRow, int startCol, int endRow, int endCol, PieceColor color, Piece target, out PieceType promotionPiece)
         {
@@ -140,54 +48,53 @@ namespace ChessGame
             int direction = color == PieceColor.White ? -1 : 1;
             int startRowBase = color == PieceColor.White ? 6 : 1;
 
-            // Move forward one square
+            // 1. AVANTI DI 1
             if (startCol == endCol && endRow == startRow + direction && target == null)
             {
                 CheckPromotion(endRow, color, ref promotionPiece);
                 return true;
             }
 
-            // Move forward two squares from starting position (creates ghost pawn)
+            // 2. AVANTI DI 2 - (en passant target is set in ExecuteMove, NOT here)
             if (startCol == endCol && endRow == startRow + 2 * direction && target == null && startRow == startRowBase)
             {
                 int middleRow = startRow + direction;
-                // Check if path is clear
                 if (board.Squares[middleRow, startCol] == null)
                 {
-                    // Set en passant target - the ghost pawn position
-                    board.EnPassantTargetRow = endRow - direction; // The square behind the moved pawn
-                    board.EnPassantTargetCol = startCol;
-                    board.IsEnPassantAvailable = true;
-                    board.LastPawnDoubleMoveColor = color;
+                    // ✅ FIX: Do NOT set board.EnPassantRow/Col here.
+                    // Setting state during validation causes corruption because
+                    // IsValidPawnMove is called many times (highlighting, AI, check detection).
+                    // En passant target is now set exclusively in ExecuteMove.
                     return true;
                 }
                 return false;
             }
 
-            // Capture diagonally
+            // 3. CATTURA DIAGONALE NORMALE
             if (Math.Abs(endCol - startCol) == 1 && endRow == startRow + direction && target != null && target.Color != color)
             {
                 CheckPromotion(endRow, color, ref promotionPiece);
                 return true;
             }
 
-            // EN PASSANT CAPTURE - Capture the ghost pawn
-            if (Math.Abs(endCol - startCol) == 1 && endRow == startRow + direction)
+            // 4. EN PASSANT - CATTURA
+            if (Math.Abs(endCol - startCol) == 1 && endRow == startRow + direction && target == null)
             {
-                // Check if en passant is available
-                if (board.IsEnPassantAvailable && board.EnPassantTargetRow.HasValue && board.EnPassantTargetCol.HasValue)
+                // Verifica se c'è un en passant disponibile
+                if (board.EnPassantRow.HasValue && board.EnPassantCol.HasValue)
                 {
-                    // The capturing pawn must move to the ghost pawn's position
-                    if (endRow == board.EnPassantTargetRow.Value && endCol == board.EnPassantTargetCol.Value)
+                    // Il pedone deve muoversi sulla casella dove c'è l'en passant
+                    if (endRow == board.EnPassantRow.Value && endCol == board.EnPassantCol.Value)
                     {
-                        // The opponent pawn is one step behind (or ahead depending on direction)
-                        int opponentPawnRow = startRow + direction;
-                        Piece opponentPawn = board.Squares[opponentPawnRow, endCol];
-
-                        // Verify there's an opponent pawn that just moved two squares
-                        if (opponentPawn != null && opponentPawn.Type == PieceType.Pawn && opponentPawn.Color != color)
+                        // Verifica che ci sia un pedone avversario nella casella dietro
+                        int opponentRow = endRow - direction;
+                        if (opponentRow >= 0 && opponentRow < 8)
                         {
-                            return true;
+                            Piece opponentPawn = board.Squares[opponentRow, endCol];
+                            if (opponentPawn != null && opponentPawn.Type == PieceType.Pawn && opponentPawn.Color != color)
+                            {
+                                return true;
+                            }
                         }
                     }
                 }
@@ -200,9 +107,65 @@ namespace ChessGame
         {
             if ((color == PieceColor.White && endRow == 0) || (color == PieceColor.Black && endRow == 7))
             {
-                promotionPiece = PieceType.Queen;
+                promotionPiece = PieceType.Queen; // Default, poi l'utente sceglie
             }
         }
+
+        public List<(int row, int col)> GetValidPawnMoves(int startRow, int startCol, PieceColor color)
+        {
+            var validMoves = new List<(int, int)>();
+            int direction = color == PieceColor.White ? -1 : 1;
+            int startRowBase = color == PieceColor.White ? 6 : 1;
+
+            // Avanti di 1
+            int newRow = startRow + direction;
+            if (newRow >= 0 && newRow < 8 && board.Squares[newRow, startCol] == null)
+            {
+                validMoves.Add((newRow, startCol));
+
+                // Avanti di 2
+                int newRow2 = startRow + 2 * direction;
+                if (startRow == startRowBase && newRow2 >= 0 && newRow2 < 8 && board.Squares[newRow2, startCol] == null)
+                {
+                    validMoves.Add((newRow2, startCol));
+                }
+            }
+
+            // Catture diagonali
+            for (int colOffset = -1; colOffset <= 1; colOffset += 2)
+            {
+                int newCol = startCol + colOffset;
+                if (newCol >= 0 && newCol < 8)
+                {
+                    newRow = startRow + direction;
+                    if (newRow >= 0 && newRow < 8)
+                    {
+                        Piece target = board.Squares[newRow, newCol];
+                        if (target != null && target.Color != color)
+                        {
+                            validMoves.Add((newRow, newCol));
+                        }
+                    }
+                }
+            }
+
+            // EN PASSANT - Aggiungi come mossa valida
+            if (board.EnPassantRow.HasValue && board.EnPassantCol.HasValue)
+            {
+                int enRow = board.EnPassantRow.Value;
+                int enCol = board.EnPassantCol.Value;
+
+                // Il pedone deve essere sulla riga giusta e colonna adiacente
+                if (Math.Abs(enCol - startCol) == 1 && enRow == startRow + direction)
+                {
+                    validMoves.Add((enRow, enCol));
+                }
+            }
+
+            return validMoves;
+        }
+
+        // ==================== METODI PER GLI ALTRI PEZZI ====================
 
         private bool IsValidKnightMove(int startRow, int startCol, int endRow, int endCol)
         {
@@ -236,9 +199,11 @@ namespace ChessGame
             int deltaRow = Math.Abs(endRow - startRow);
             int deltaCol = Math.Abs(endCol - startCol);
 
+            // Movimento normale del re
             if (deltaRow <= 1 && deltaCol <= 1)
                 return true;
 
+            // ARROCCO
             if (deltaRow == 0 && deltaCol == 2 && !board.Squares[startRow, startCol].HasMoved)
             {
                 int rookCol = endCol > startCol ? 7 : 0;
@@ -262,6 +227,8 @@ namespace ChessGame
 
             return false;
         }
+
+        // ==================== METODI DI UTILITÀ ====================
 
         private bool IsClearDiagonal(int startRow, int startCol, int endRow, int endCol)
         {
@@ -313,16 +280,24 @@ namespace ChessGame
             tempBoard.Squares[endRow, endCol] = movedPiece;
             tempBoard.Squares[startRow, startCol] = null;
 
+            // Gestione en passant nella simulazione
             if (movedPiece.Type == PieceType.Pawn && Math.Abs(endCol - startCol) == 1 && capturedPiece == null)
             {
-                int direction = color == PieceColor.White ? -1 : 1;
-                int capturedPawnRow = endRow - direction;
-                if (capturedPawnRow >= 0 && capturedPawnRow < 8)
+                if (board.IsEnPassantAvailable && board.EnPassantRow.HasValue && board.EnPassantCol.HasValue)
                 {
-                    tempBoard.Squares[capturedPawnRow, endCol] = null;
+                    if (endRow == board.EnPassantRow.Value && endCol == board.EnPassantCol.Value)
+                    {
+                        int direction = color == PieceColor.White ? -1 : 1;
+                        int capturedPawnRow = endRow - direction;
+                        if (capturedPawnRow >= 0 && capturedPawnRow < 8)
+                        {
+                            tempBoard.Squares[capturedPawnRow, endCol] = null;
+                        }
+                    }
                 }
             }
 
+            // Gestione arrocco nella simulazione
             if (movedPiece.Type == PieceType.King && Math.Abs(endCol - startCol) == 2)
             {
                 int rookStartCol = endCol > startCol ? 7 : 0;
@@ -339,6 +314,39 @@ namespace ChessGame
             return tempValidator.IsKingInCheck(color);
         }
 
+        public bool IsKingInCheck(PieceColor color)
+        {
+            int kingRow = -1, kingCol = -1;
+            for (int row = 0; row < 8; row++)
+            {
+                for (int col = 0; col < 8; col++)
+                {
+                    Piece piece = board.Squares[row, col];
+                    if (piece != null && piece.Type == PieceType.King && piece.Color == color)
+                    {
+                        kingRow = row;
+                        kingCol = col;
+                        break;
+                    }
+                }
+            }
+
+            PieceColor opponent = color == PieceColor.White ? PieceColor.Black : PieceColor.White;
+            for (int row = 0; row < 8; row++)
+            {
+                for (int col = 0; col < 8; col++)
+                {
+                    Piece piece = board.Squares[row, col];
+                    if (piece != null && piece.Color == opponent)
+                    {
+                        if (IsValidMoveWithoutCheck(row, col, kingRow, kingCol, opponent))
+                            return true;
+                    }
+                }
+            }
+            return false;
+        }
+
         private bool IsSquareUnderAttack(int row, int col, PieceColor defendingColor)
         {
             PieceColor attackingColor = defendingColor == PieceColor.White ? PieceColor.Black : PieceColor.White;
@@ -351,6 +359,73 @@ namespace ChessGame
                     {
                         if (IsValidMoveWithoutCheck(r, c, row, col, attackingColor))
                             return true;
+                    }
+                }
+            }
+            return false;
+        }
+
+        public bool IsValidMoveWithoutCheck(int startRow, int startCol, int endRow, int endCol, PieceColor currentPlayer)
+        {
+            Piece piece = board.Squares[startRow, startCol];
+            if (piece == null || piece.Color != currentPlayer)
+                return false;
+
+            Piece targetPiece = board.Squares[endRow, endCol];
+            if (targetPiece != null && targetPiece.Color == currentPlayer)
+                return false;
+
+            return piece.Type switch
+            {
+                PieceType.Pawn => IsValidPawnMove(startRow, startCol, endRow, endCol, piece.Color, targetPiece, out _),
+                PieceType.Knight => IsValidKnightMove(startRow, startCol, endRow, endCol),
+                PieceType.Bishop => IsValidBishopMove(startRow, startCol, endRow, endCol),
+                PieceType.Rook => IsValidRookMove(startRow, startCol, endRow, endCol),
+                PieceType.Queen => IsValidQueenMove(startRow, startCol, endRow, endCol),
+                PieceType.King => IsValidKingMove(startRow, startCol, endRow, endCol, currentPlayer),
+                _ => false
+            };
+        }
+
+        public List<(int row, int col)> GetValidMovesForPiece(int row, int col, PieceColor color)
+        {
+            var validMoves = new List<(int, int)>();
+            Piece piece = board.Squares[row, col];
+
+            if (piece == null || piece.Color != color)
+                return validMoves;
+
+            for (int endRow = 0; endRow < 8; endRow++)
+            {
+                for (int endCol = 0; endCol < 8; endCol++)
+                {
+                    if (IsValidMove(row, col, endRow, endCol, color, out _))
+                    {
+                        validMoves.Add((endRow, endCol));
+                    }
+                }
+            }
+
+            return validMoves;
+        }
+
+        public bool HasAnyLegalMove(PieceColor color)
+        {
+            for (int startRow = 0; startRow < 8; startRow++)
+            {
+                for (int startCol = 0; startCol < 8; startCol++)
+                {
+                    Piece piece = board.Squares[startRow, startCol];
+                    if (piece != null && piece.Color == color)
+                    {
+                        for (int endRow = 0; endRow < 8; endRow++)
+                        {
+                            for (int endCol = 0; endCol < 8; endCol++)
+                            {
+                                if (IsValidMove(startRow, startCol, endRow, endCol, color, out _))
+                                    return true;
+                            }
+                        }
                     }
                 }
             }
