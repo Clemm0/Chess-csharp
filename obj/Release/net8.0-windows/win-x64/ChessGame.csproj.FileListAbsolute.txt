@@ -1,0 +1,15 @@
+C:\Users\Clemente\Documents\C#\Chess-csharp\bin\Release\net8.0-windows\win-x64\ChessGame.exe
+C:\Users\Clemente\Documents\C#\Chess-csharp\bin\Release\net8.0-windows\win-x64\ChessGame.deps.json
+C:\Users\Clemente\Documents\C#\Chess-csharp\bin\Release\net8.0-windows\win-x64\ChessGame.runtimeconfig.json
+C:\Users\Clemente\Documents\C#\Chess-csharp\bin\Release\net8.0-windows\win-x64\ChessGame.dll
+C:\Users\Clemente\Documents\C#\Chess-csharp\bin\Release\net8.0-windows\win-x64\ChessGame.pdb
+C:\Users\Clemente\Documents\C#\Chess-csharp\obj\Release\net8.0-windows\win-x64\ChessGame.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\Clemente\Documents\C#\Chess-csharp\obj\Release\net8.0-windows\win-x64\ChessGame.AssemblyInfoInputs.cache
+C:\Users\Clemente\Documents\C#\Chess-csharp\obj\Release\net8.0-windows\win-x64\ChessGame.AssemblyInfo.cs
+C:\Users\Clemente\Documents\C#\Chess-csharp\obj\Release\net8.0-windows\win-x64\ChessGame.csproj.CoreCompileInputs.cache
+C:\Users\Clemente\Documents\C#\Chess-csharp\obj\Release\net8.0-windows\win-x64\ChessGame.dll
+C:\Users\Clemente\Documents\C#\Chess-csharp\obj\Release\net8.0-windows\win-x64\refint\ChessGame.dll
+C:\Users\Clemente\Documents\C#\Chess-csharp\obj\Release\net8.0-windows\win-x64\ChessGame.pdb
+C:\Users\Clemente\Documents\C#\Chess-csharp\obj\Release\net8.0-windows\win-x64\ChessGame.genruntimeconfig.cache
+C:\Users\Clemente\Documents\C#\Chess-csharp\obj\Release\net8.0-windows\win-x64\ref\ChessGame.dll
+C:\Users\Clemente\Documents\C#\Chess-csharp\obj\Release\net8.0-windows\win-x64\ChessGame.sourcelink.json
