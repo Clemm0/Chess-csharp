@@ -229,7 +229,7 @@ namespace ChessGame
 
         private int GetPositionBonus(PieceType type, PieceColor color, int row, int col)
         {
-            int r = color == PieceColor.White ? row : 7 - row; // mirror for Black
+            int r = color == PieceColor.White ? row : 7 - row;  
             return type switch
             {
                 PieceType.Pawn   => PawnTable[r, col],

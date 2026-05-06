@@ -367,7 +367,6 @@ namespace ChessGame
             UpdateMoveHistory();
             UpdateScore();
 
-            // If AI plays White, it goes first immediately
             if (isAIMode && aiColor == PieceColor.White && !gameOver)
                 StartAIMove();
         }
@@ -451,7 +450,6 @@ namespace ChessGame
         {
             if (gameOver || isAIThinking) return;
 
-            // Block the player from touching the AI's pieces
             if (isAIMode && currentPlayer == aiColor) return;
 
             if (selectedRow == null)
@@ -597,7 +595,6 @@ namespace ChessGame
             
             Move move = new Move(startRow, startCol, endRow, endCol, movedPiece, capturedPiece);
             
-            // EN PASSANT - Cattura
             if (movedPiece.Type == PieceType.Pawn && Math.Abs(endCol - startCol) == 1 && capturedPiece == null)
             {
                 if (board.EnPassantRow.HasValue && board.EnPassantCol.HasValue)
@@ -628,12 +625,10 @@ namespace ChessGame
                 }
             }
             
-            // Esegui movimento
             board.Squares[endRow, endCol] = movedPiece;
             board.Squares[startRow, startCol] = null;
             movedPiece.HasMoved = true;
             
-            // Arrocco
             if (movedPiece.Type == PieceType.King && Math.Abs(endCol - startCol) == 2)
             {
                 move.IsCastling = true;
@@ -652,7 +647,6 @@ namespace ChessGame
                 }
             }
             
-            // Promozione
             if (movedPiece.Type == PieceType.Pawn && (endRow == 0 || endRow == 7))
             {
                 PieceType selectedPromotion = ShowPromotionDialog();
@@ -663,12 +657,10 @@ namespace ChessGame
             moveHistory.Add(move);
             undoneMoves.Clear();
             
-            // Pulisci en passant
             board.ClearEnPassant();
             
             UpdateBoardDisplay();
             
-            // Controllo fine partita
             bool isCheck = validator.IsKingInCheck(currentPlayer);
             bool hasMoves = validator.HasAnyLegalMove(currentPlayer);
             
@@ -1049,10 +1041,8 @@ namespace ChessGame
                     
                     if (saveData != null)
                     {
-                        // Nuovo board
                         board = new Board();
                         
-                        // Carica board
                         var boardData = JsonSerializer.Deserialize<List<object>>(saveData["BoardData"].ToString());
                         foreach (var item in boardData)
                         {
@@ -1065,19 +1055,16 @@ namespace ChessGame
                             board.Squares[row, col] = new Piece(type, color) { HasMoved = hasMoved };
                         }
                         
-                        // Carica en passant
                         if (saveData.ContainsKey("EnPassantRow") && saveData["EnPassantRow"] != null)
                             board.EnPassantRow = Convert.ToInt32(saveData["EnPassantRow"]);
                         if (saveData.ContainsKey("EnPassantCol") && saveData["EnPassantCol"] != null)
                             board.EnPassantCol = Convert.ToInt32(saveData["EnPassantCol"]);
                         
-                        // Carica stato gioco
                         currentPlayer = (PieceColor)Enum.Parse(typeof(PieceColor), saveData["CurrentPlayer"].ToString());
                         isAIMode = Convert.ToBoolean(saveData["IsAIMode"]);
                         whiteScore = Convert.ToInt32(saveData["WhiteScore"]);
                         blackScore = Convert.ToInt32(saveData["BlackScore"]);
                         
-                        // Carica storico mosse
                         moveHistory = new List<Move>();
                         var moveDataList = JsonSerializer.Deserialize<List<object>>(saveData["MoveHistoryData"].ToString());
                         foreach (var moveItem in moveDataList)
@@ -1100,7 +1087,6 @@ namespace ChessGame
                             moveHistory.Add(move);
                         }
                         
-                        // Ricrea validator e AI
                         validator = new MoveValidator(board);
                         ai = new AIOpponent();
                         gameOver = false;
@@ -1109,7 +1095,6 @@ namespace ChessGame
                         undoneMoves = new List<Move>();
                         currentValidMoves = null;
                         
-                        // Aggiorna UI
                         aiModeButton.Text = isAIMode ? "🤖 Modalità IA: ON" : "🤖 Modalità IA: OFF";
                         aiModeButton.BackColor = isAIMode ? Color.FromArgb(76, 175, 80) : Color.FromArgb(255, 152, 0);
                         
@@ -1147,16 +1132,14 @@ namespace ChessGame
 
         private void AISideButton_Click(object sender, EventArgs e)
         {
-            // Toggle which color the AI controls, then start a new game
             aiColor = aiColor == PieceColor.Black ? PieceColor.White : PieceColor.Black;
 
             string playerSide = aiColor == PieceColor.Black ? "Bianco" : "Nero";
             aiSideButton.Text = $"♟ Giochi come: {playerSide}";
             aiSideButton.BackColor = aiColor == PieceColor.Black
-                ? Color.FromArgb(60, 60, 60)   // player is White (normal)
-                : Color.FromArgb(30, 100, 160); // player is Black (highlighted)
+                ? Color.FromArgb(60, 60, 60) 
+                : Color.FromArgb(30, 100, 160); 
 
-            // Start a fresh game so the board flips cleanly
             NewGame();
         }
 

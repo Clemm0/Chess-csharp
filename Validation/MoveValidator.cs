@@ -40,7 +40,6 @@ namespace ChessGame
             return !WouldBeInCheck(startRow, startCol, endRow, endCol, currentPlayer);
         }
 
-        // ==================== METODI PER I PEDONI ====================
 
         private bool IsValidPawnMove(int startRow, int startCol, int endRow, int endCol, PieceColor color, Piece target, out PieceType promotionPiece)
         {
@@ -48,17 +47,12 @@ namespace ChessGame
             int direction = color == PieceColor.White ? -1 : 1;
             int startRowBase = color == PieceColor.White ? 6 : 1;
 
-            // 1. AVANTI DI 1
             if (startCol == endCol && endRow == startRow + direction && target == null)
             {
                 CheckPromotion(endRow, color, ref promotionPiece);
                 return true;
             }
 
-            // 2. AVANTI DI 2
-            // NOTE: En passant target is set in ChessForm.ExecuteMove after the move is confirmed,
-            // NOT here. Setting it here corrupts the state because IsValidPawnMove is called many
-            // times during highlighting, AI evaluation, and check detection.
             if (startCol == endCol && endRow == startRow + 2 * direction && target == null && startRow == startRowBase)
             {
                 int middleRow = startRow + direction;
@@ -67,23 +61,18 @@ namespace ChessGame
                 return false;
             }
 
-            // 3. CATTURA DIAGONALE NORMALE
             if (Math.Abs(endCol - startCol) == 1 && endRow == startRow + direction && target != null && target.Color != color)
             {
                 CheckPromotion(endRow, color, ref promotionPiece);
                 return true;
             }
 
-            // 4. EN PASSANT - CATTURA
             if (Math.Abs(endCol - startCol) == 1 && endRow == startRow + direction && target == null)
             {
-                // Verifica se c'è un en passant disponibile
                 if (board.EnPassantRow.HasValue && board.EnPassantCol.HasValue)
                 {
-                    // Il pedone deve muoversi sulla casella dove c'è l'en passant
                     if (endRow == board.EnPassantRow.Value && endCol == board.EnPassantCol.Value)
                     {
-                        // Verifica che ci sia un pedone avversario nella casella dietro
                         int opponentRow = endRow - direction;
                         if (opponentRow >= 0 && opponentRow < 8)
                         {
@@ -104,7 +93,7 @@ namespace ChessGame
         {
             if ((color == PieceColor.White && endRow == 0) || (color == PieceColor.Black && endRow == 7))
             {
-                promotionPiece = PieceType.Queen; // Default, poi l'utente sceglie
+                promotionPiece = PieceType.Queen;
             }
         }
 
@@ -114,13 +103,11 @@ namespace ChessGame
             int direction = color == PieceColor.White ? -1 : 1;
             int startRowBase = color == PieceColor.White ? 6 : 1;
 
-            // Avanti di 1
             int newRow = startRow + direction;
             if (newRow >= 0 && newRow < 8 && board.Squares[newRow, startCol] == null)
             {
                 validMoves.Add((newRow, startCol));
 
-                // Avanti di 2
                 int newRow2 = startRow + 2 * direction;
                 if (startRow == startRowBase && newRow2 >= 0 && newRow2 < 8 && board.Squares[newRow2, startCol] == null)
                 {
@@ -128,7 +115,6 @@ namespace ChessGame
                 }
             }
 
-            // Catture diagonali
             for (int colOffset = -1; colOffset <= 1; colOffset += 2)
             {
                 int newCol = startCol + colOffset;
@@ -146,13 +132,11 @@ namespace ChessGame
                 }
             }
 
-            // EN PASSANT - Aggiungi come mossa valida
             if (board.EnPassantRow.HasValue && board.EnPassantCol.HasValue)
             {
                 int enRow = board.EnPassantRow.Value;
                 int enCol = board.EnPassantCol.Value;
 
-                // Il pedone deve essere sulla riga giusta e colonna adiacente
                 if (Math.Abs(enCol - startCol) == 1 && enRow == startRow + direction)
                 {
                     validMoves.Add((enRow, enCol));
@@ -162,7 +146,6 @@ namespace ChessGame
             return validMoves;
         }
 
-        // ==================== METODI PER GLI ALTRI PEZZI ====================
 
         private bool IsValidKnightMove(int startRow, int startCol, int endRow, int endCol)
         {
@@ -196,11 +179,9 @@ namespace ChessGame
             int deltaRow = Math.Abs(endRow - startRow);
             int deltaCol = Math.Abs(endCol - startCol);
 
-            // Movimento normale del re
             if (deltaRow <= 1 && deltaCol <= 1)
                 return true;
 
-            // ARROCCO
             if (deltaRow == 0 && deltaCol == 2 && !board.Squares[startRow, startCol].HasMoved)
             {
                 int rookCol = endCol > startCol ? 7 : 0;
@@ -225,7 +206,6 @@ namespace ChessGame
             return false;
         }
 
-        // ==================== METODI DI UTILITÀ ====================
 
         private bool IsClearDiagonal(int startRow, int startCol, int endRow, int endCol)
         {
@@ -277,7 +257,6 @@ namespace ChessGame
             tempBoard.Squares[endRow, endCol] = movedPiece;
             tempBoard.Squares[startRow, startCol] = null;
 
-            // Gestione en passant nella simulazione - VERSIONE CORRETTA
             if (movedPiece.Type == PieceType.Pawn && Math.Abs(endCol - startCol) == 1 && capturedPiece == null)
             {
                 if (board.IsEnPassantAvailable && board.EnPassantRow.HasValue && board.EnPassantCol.HasValue)
@@ -294,7 +273,6 @@ namespace ChessGame
                 }
             }
 
-            // Gestione arrocco nella simulazione
             if (movedPiece.Type == PieceType.King && Math.Abs(endCol - startCol) == 2)
             {
                 int rookStartCol = endCol > startCol ? 7 : 0;

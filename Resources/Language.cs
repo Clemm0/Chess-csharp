@@ -14,7 +14,6 @@ namespace ChessGame.Resources
         
         private static void InitializeItalianMessages()
         {
-            // Game messages
             messages["WhiteTurn"] = "Turno del Bianco";
             messages["BlackTurn"] = "Turno del Nero";
             messages["WhiteInCheck"] = "Il Bianco è sotto SCACCO!";
@@ -27,7 +26,6 @@ namespace ChessGame.Resources
             messages["BlackWins"] = "Nero";
             messages["Draw"] = "Pareggio!";
             
-            // AI messages
             messages["AIThinking"] = "L'IA sta pensando...";
             messages["AITimeout"] = "L'IA ha impiegato troppo tempo!";
             messages["AICheckmateTimeout"] = "L'IA ha impiegato troppo tempo! SCACCO MATTO dichiarato!";
@@ -36,14 +34,12 @@ namespace ChessGame.Resources
             messages["PlayerVictory"] = "Complimenti! Hai battuto l'IA!";
             messages["AILevelUp"] = "Il livello dell'IA è aumentato a {0}!";
             
-            // Difficulty levels
             messages["DifficultyNewbie"] = "Principiante";
             messages["DifficultyIntermediate"] = "Intermedio";
             messages["DifficultyGood"] = "Buono";
             messages["DifficultyMaster"] = "Maestro";
             messages["DifficultyLabel"] = "Difficoltà IA:";
             
-            // Button texts
             messages["UndoButton"] = "Annulla (Ctrl+Z)";
             messages["RedoButton"] = "Ripristina (Ctrl+Y)";
             messages["ResetButton"] = "Nuova Partita";
@@ -52,7 +48,6 @@ namespace ChessGame.Resources
             messages["AIModeOff"] = "Modalità IA: OFF";
             messages["AIModeOn"] = "Modalità IA: ON";
             
-            // Save/Load messages
             messages["SaveSuccess"] = "Partita salvata con successo!";
             messages["SaveError"] = "Errore durante il salvataggio: {0}";
             messages["LoadSuccess"] = "Partita caricata con successo!";
@@ -61,15 +56,12 @@ namespace ChessGame.Resources
             messages["LoadTitle"] = "Carica Partita";
             messages["FileFilter"] = "File di Salvataggio Scacchi (*.json)|*.json";
             
-            // Undo/Redo messages
             messages["NoMovesToUndo"] = "Nessuna mossa da annullare!";
             messages["NoMovesToRedo"] = "Nessuna mossa da ripristinare!";
             messages["GameReset"] = "Partita resettata! Turno del Bianco";
             
-            // Score
             messages["ScoreLabel"] = "Bianco: {0} | Nero: {1}";
             
-            // Move history
             messages["WhitePrefix"] = "Bianco";
             messages["BlackPrefix"] = "Nero";
             messages["CaptureSymbol"] = " ✗";
@@ -77,7 +69,6 @@ namespace ChessGame.Resources
             messages["PromotionSymbol"] = " (=D)";
             messages["EnPassantSymbol"] = " (a.p.)";
             
-            // Promotion
             messages["PromotionQuestion"] = "Promozione pedone! Scegli il pezzo (D/T/A/C): ";
             messages["PromotionQueen"] = "D";
             messages["PromotionRook"] = "T";
