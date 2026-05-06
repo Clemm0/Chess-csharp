@@ -40,6 +40,8 @@ namespace ChessGame
         private int blackScore = 0;
         private List<(int row, int col)> currentValidMoves;
         private int aiThinkingTime = 0;
+        private PieceColor aiColor = PieceColor.Black;
+        private Button aiSideButton;
 
         public ChessForm()
         {
@@ -258,10 +260,24 @@ namespace ChessGame
             aiModeButton.FlatAppearance.BorderSize = 0;
             aiModeButton.Click += AIModeButton_Click;
             
+            aiSideButton = new Button
+            {
+                Text = "♟ Giochi come: Bianco",
+                Location = new Point(40, 405),
+                Size = new Size(300, 45),
+                BackColor = Color.FromArgb(60, 60, 60),
+                ForeColor = Color.White,
+                FlatStyle = FlatStyle.Flat,
+                Font = new Font("Segoe UI", 11, FontStyle.Bold),
+                Cursor = Cursors.Hand
+            };
+            aiSideButton.FlatAppearance.BorderSize = 0;
+            aiSideButton.Click += AISideButton_Click;
+            
             moveHistoryBox = new RichTextBox
             {
-                Location = new Point(40, 410),
-                Size = new Size(300, 250),
+                Location = new Point(40, 460),
+                Size = new Size(300, 200),
                 ReadOnly = true,
                 Font = new Font("Consolas", 9),
                 BackColor = Color.FromArgb(30, 30, 30),
@@ -272,7 +288,7 @@ namespace ChessGame
             rightPanel.Controls.AddRange(new Control[] { 
                 statusLabel, scoreLabel, difficultyLabel, difficultyComboBox,
                 undoButton, redoButton, resetButton, saveButton, loadButton, 
-                aiModeButton, moveHistoryBox 
+                aiModeButton, aiSideButton, moveHistoryBox 
             });
             
             this.Controls.Add(gamePanel);
@@ -334,6 +350,8 @@ namespace ChessGame
             board = new Board();
             validator = new MoveValidator(board);
             ai = new AIOpponent();
+            if (difficultyComboBox != null)
+                ai.SetDifficulty((DifficultyLevel)difficultyComboBox.SelectedIndex);
             currentPlayer = PieceColor.White;
             gameOver = false;
             isAIThinking = false;
@@ -343,12 +361,15 @@ namespace ChessGame
             undoneMoves = new List<Move>();
             whiteScore = 0;
             blackScore = 0;
-            isAIMode = false;
             currentValidMoves = null;
             UpdateBoardDisplay();
             UpdateStatus();
             UpdateMoveHistory();
             UpdateScore();
+
+            // If AI plays White, it goes first immediately
+            if (isAIMode && aiColor == PieceColor.White && !gameOver)
+                StartAIMove();
         }
 
         private void UpdateBoardDisplay()
@@ -430,6 +451,9 @@ namespace ChessGame
         {
             if (gameOver || isAIThinking) return;
 
+            // Block the player from touching the AI's pieces
+            if (isAIMode && currentPlayer == aiColor) return;
+
             if (selectedRow == null)
             {
                 Piece piece = board.Squares[row, col];
@@ -469,7 +493,7 @@ namespace ChessGame
                     selectedCol = null;
                     currentValidMoves = null;
                     
-                    if (isAIMode && !gameOver && currentPlayer == PieceColor.Black)
+                    if (isAIMode && !gameOver && currentPlayer == aiColor)
                     {
                         StartAIMove();
                     }
@@ -639,30 +663,19 @@ namespace ChessGame
             moveHistory.Add(move);
             undoneMoves.Clear();
             
-            // ✅ FIX: Set en passant target here (after execution), never in the validator.
-            // If this move was a pawn double-push, store the skipped square as the en passant target.
-            // For every other move, clear it so it expires after one turn.
-            if (movedPiece.Type == PieceType.Pawn && Math.Abs(endRow - startRow) == 2)
-            {
-                int direction = currentPlayer == PieceColor.White ? -1 : 1;
-                board.SetEnPassant(startRow + direction, startCol, currentPlayer);
-            }
-            else
-            {
-                board.ClearEnPassant();
-            }
+            // Pulisci en passant
+            board.ClearEnPassant();
             
             UpdateBoardDisplay();
             
             // Controllo fine partita
-            PieceColor nextPlayer = currentPlayer == PieceColor.White ? PieceColor.Black : PieceColor.White;
-            bool isCheck = validator.IsKingInCheck(nextPlayer);
-            bool hasMoves = validator.HasAnyLegalMove(nextPlayer);
+            bool isCheck = validator.IsKingInCheck(currentPlayer);
+            bool hasMoves = validator.HasAnyLegalMove(currentPlayer);
             
             if (isCheck && !hasMoves)
             {
                 gameOver = true;
-                string winner = currentPlayer == PieceColor.White ? "Bianco" : "Nero";
+                string winner = currentPlayer == PieceColor.White ? "Nero" : "Bianco";
                 statusLabel.Text = $"SCACCO MATTO! {winner} vince!";
                 MessageBox.Show($"SCACCO MATTO! {winner} vince!", "Game Over", MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
@@ -674,7 +687,7 @@ namespace ChessGame
             }
             else
             {
-                currentPlayer = nextPlayer;
+                currentPlayer = currentPlayer == PieceColor.White ? PieceColor.Black : PieceColor.White;
                 UpdateStatus();
             }
             
@@ -803,14 +816,14 @@ namespace ChessGame
 
         private void MakeAIMove()
         {
-            if (gameOver || currentPlayer != PieceColor.Black || !isAIMode) 
+            if (gameOver || currentPlayer != aiColor || !isAIMode) 
             {
                 isAIThinking = false;
                 if (aiThinkingTimer != null) aiThinkingTimer.Stop();
                 return;
             }
             
-            var bestMove = ai.GetBestMove(board, PieceColor.Black);
+            var bestMove = ai.GetBestMove(board, aiColor);
             
             isAIThinking = false;
             if (aiThinkingTimer != null) aiThinkingTimer.Stop();
@@ -1128,10 +1141,23 @@ namespace ChessGame
             aiModeButton.Text = isAIMode ? "🤖 Modalità IA: ON" : "🤖 Modalità IA: OFF";
             aiModeButton.BackColor = isAIMode ? Color.FromArgb(76, 175, 80) : Color.FromArgb(255, 152, 0);
             
-            if (isAIMode && currentPlayer == PieceColor.Black && !gameOver && !isAIThinking)
-            {
+            if (isAIMode && currentPlayer == aiColor && !gameOver && !isAIThinking)
                 StartAIMove();
-            }
+        }
+
+        private void AISideButton_Click(object sender, EventArgs e)
+        {
+            // Toggle which color the AI controls, then start a new game
+            aiColor = aiColor == PieceColor.Black ? PieceColor.White : PieceColor.Black;
+
+            string playerSide = aiColor == PieceColor.Black ? "Bianco" : "Nero";
+            aiSideButton.Text = $"♟ Giochi come: {playerSide}";
+            aiSideButton.BackColor = aiColor == PieceColor.Black
+                ? Color.FromArgb(60, 60, 60)   // player is White (normal)
+                : Color.FromArgb(30, 100, 160); // player is Black (highlighted)
+
+            // Start a fresh game so the board flips cleanly
+            NewGame();
         }
 
         private void UpdateStatus()

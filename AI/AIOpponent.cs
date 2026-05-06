@@ -11,7 +11,81 @@ namespace ChessGame
         private DifficultyLevel currentDifficulty = DifficultyLevel.Newbie;
         private int consecutiveWins = 0;
 
+        private const int PawnValue   = 100;
+        private const int KnightValue = 320;
+        private const int BishopValue = 330;
+        private const int RookValue   = 500;
+        private const int QueenValue  = 900;
+        private const int KingValue   = 20000;
+
+        private static readonly int[,] PawnTable = {
+            {  0,  0,  0,  0,  0,  0,  0,  0 },
+            { 50, 50, 50, 50, 50, 50, 50, 50 },
+            { 10, 10, 20, 30, 30, 20, 10, 10 },
+            {  5,  5, 10, 25, 25, 10,  5,  5 },
+            {  0,  0,  0, 20, 20,  0,  0,  0 },
+            {  5, -5,-10,  0,  0,-10, -5,  5 },
+            {  5, 10, 10,-20,-20, 10, 10,  5 },
+            {  0,  0,  0,  0,  0,  0,  0,  0 }
+        };
+        private static readonly int[,] KnightTable = {
+            {-50,-40,-30,-30,-30,-30,-40,-50 },
+            {-40,-20,  0,  0,  0,  0,-20,-40 },
+            {-30,  0, 10, 15, 15, 10,  0,-30 },
+            {-30,  5, 15, 20, 20, 15,  5,-30 },
+            {-30,  0, 15, 20, 20, 15,  0,-30 },
+            {-30,  5, 10, 15, 15, 10,  5,-30 },
+            {-40,-20,  0,  5,  5,  0,-20,-40 },
+            {-50,-40,-30,-30,-30,-30,-40,-50 }
+        };
+        private static readonly int[,] BishopTable = {
+            {-20,-10,-10,-10,-10,-10,-10,-20 },
+            {-10,  0,  0,  0,  0,  0,  0,-10 },
+            {-10,  0,  5, 10, 10,  5,  0,-10 },
+            {-10,  5,  5, 10, 10,  5,  5,-10 },
+            {-10,  0, 10, 10, 10, 10,  0,-10 },
+            {-10, 10, 10, 10, 10, 10, 10,-10 },
+            {-10,  5,  0,  0,  0,  0,  5,-10 },
+            {-20,-10,-10,-10,-10,-10,-10,-20 }
+        };
+        private static readonly int[,] RookTable = {
+            {  0,  0,  0,  0,  0,  0,  0,  0 },
+            {  5, 10, 10, 10, 10, 10, 10,  5 },
+            { -5,  0,  0,  0,  0,  0,  0, -5 },
+            { -5,  0,  0,  0,  0,  0,  0, -5 },
+            { -5,  0,  0,  0,  0,  0,  0, -5 },
+            { -5,  0,  0,  0,  0,  0,  0, -5 },
+            { -5,  0,  0,  0,  0,  0,  0, -5 },
+            {  0,  0,  0,  5,  5,  0,  0,  0 }
+        };
+        private static readonly int[,] QueenTable = {
+            {-20,-10,-10, -5, -5,-10,-10,-20 },
+            {-10,  0,  0,  0,  0,  0,  0,-10 },
+            {-10,  0,  5,  5,  5,  5,  0,-10 },
+            { -5,  0,  5,  5,  5,  5,  0, -5 },
+            {  0,  0,  5,  5,  5,  5,  0, -5 },
+            {-10,  5,  5,  5,  5,  5,  0,-10 },
+            {-10,  0,  5,  0,  0,  0,  0,-10 },
+            {-20,-10,-10, -5, -5,-10,-10,-20 }
+        };
+        private static readonly int[,] KingTable = {
+            {-30,-40,-40,-50,-50,-40,-40,-30 },
+            {-30,-40,-40,-50,-50,-40,-40,-30 },
+            {-30,-40,-40,-50,-50,-40,-40,-30 },
+            {-30,-40,-40,-50,-50,-40,-40,-30 },
+            {-20,-30,-30,-40,-40,-30,-30,-20 },
+            {-10,-20,-20,-20,-20,-20,-20,-10 },
+            { 20, 20,  0,  0,  0,  0, 20, 20 },
+            { 20, 30, 10,  0,  0, 10, 30, 20 }
+        };
+
         public DifficultyLevel GetCurrentDifficulty() => currentDifficulty;
+
+        public void SetDifficulty(DifficultyLevel difficulty)
+        {
+            currentDifficulty = difficulty;
+            consecutiveWins = 0;
+        }
 
         public void RecordWin()
         {
@@ -23,92 +97,76 @@ namespace ChessGame
             }
         }
 
-        public void RecordLoss()
-        {
-            consecutiveWins = 0;
-        }
+        public void RecordLoss() => consecutiveWins = 0;
 
         public (int startRow, int startCol, int endRow, int endCol, PieceType promotionPiece)? GetBestMove(Board board, PieceColor aiColor)
         {
             var validMoves = GetAllValidMoves(board, aiColor);
-            if (validMoves.Count == 0)
-                return null;
+            if (validMoves.Count == 0) return null;
 
-            int searchDepth = GetDepthFromDifficulty();
-            var result = Minimax(board, searchDepth, int.MinValue, int.MaxValue, true, aiColor, aiColor);
+            if (currentDifficulty == DifficultyLevel.Newbie)
+            {
+                var m = validMoves[random.Next(validMoves.Count)];
+                return (m.startRow, m.startCol, m.endRow, m.endCol, m.promotionPiece);
+            }
+
+            int depth = GetDepthFromDifficulty();
+            var result = Minimax(board, depth, int.MinValue, int.MaxValue, true, aiColor, aiColor);
 
             if (result.bestMove.HasValue)
             {
-                string boardHash = GetBoardHash(board);
-                if (positionHistory.ContainsKey(boardHash))
-                    positionHistory[boardHash] = positionHistory[boardHash] + (result.bestScore > 0 ? 1 : -1);
-                else
-                    positionHistory[boardHash] = 0;
-
+                string hash = GetBoardHash(board);
+                positionHistory[hash] = positionHistory.GetValueOrDefault(hash, 0) + 1;
                 return result.bestMove;
             }
 
-            return null;
+            var fallback = validMoves[0];
+            return (fallback.startRow, fallback.startCol, fallback.endRow, fallback.endCol, fallback.promotionPiece);
         }
 
         private int GetDepthFromDifficulty()
         {
             return currentDifficulty switch
             {
-                DifficultyLevel.Newbie => 1,
                 DifficultyLevel.Intermediate => 2,
-                DifficultyLevel.Good => 3,
-                DifficultyLevel.Master => 4,
+                DifficultyLevel.Good         => 3,
+                DifficultyLevel.Master       => 4,
                 _ => 2
             };
         }
 
-        private ((int startRow, int startCol, int endRow, int endCol, PieceType promotionPiece)? bestMove, int bestScore) Minimax(Board board, int depth, int alpha, int beta, bool isMaximizing, PieceColor aiColor, PieceColor currentColor)
+        private ((int startRow, int startCol, int endRow, int endCol, PieceType promotionPiece)? bestMove, int bestScore) Minimax(
+            Board board, int depth, int alpha, int beta, bool isMaximizing, PieceColor aiColor, PieceColor currentColor)
         {
             if (depth == 0)
                 return (null, EvaluateBoard(board, aiColor));
 
             var moves = GetAllValidMoves(board, currentColor);
             if (moves.Count == 0)
-                return (null, isMaximizing ? int.MinValue : int.MaxValue);
-
-            if (currentDifficulty == DifficultyLevel.Newbie && random.Next(100) < 30)
             {
-                var randomMove = moves[random.Next(moves.Count)];
-                return ((randomMove.startRow, randomMove.startCol, randomMove.endRow, randomMove.endCol, randomMove.promotionPiece), 0);
+                var v = new MoveValidator(board);
+                if (v.IsKingInCheck(currentColor))
+                    return (null, isMaximizing ? -50000 - depth * 100 : 50000 + depth * 100);
+                return (null, 0); 
             }
+
+            var ordered = OrderMoves(board, moves);
 
             if (isMaximizing)
             {
                 int maxScore = int.MinValue;
                 (int, int, int, int, PieceType)? bestMove = null;
 
-                foreach (var move in moves)
+                foreach (var move in ordered)
                 {
-                    Board newBoard = new Board(board);
-                    Piece movedPiece = newBoard.Squares[move.startRow, move.startCol];
+                    Board nb = new Board(board);
+                    ApplyMoveToBoard(nb, move.startRow, move.startCol, move.endRow, move.endCol, move.promotionPiece, currentColor);
+                    int score = Minimax(nb, depth - 1, alpha, beta, false, aiColor, GetOpponentColor(currentColor)).bestScore;
 
-                    newBoard.Squares[move.endRow, move.endCol] = movedPiece;
-                    newBoard.Squares[move.startRow, move.startCol] = null;
-                    movedPiece.HasMoved = true;
-
-                    if (move.promotionPiece != PieceType.None)
-                        newBoard.Squares[move.endRow, move.endCol] = new Piece(move.promotionPiece, currentColor);
-
-                    var result = Minimax(newBoard, depth - 1, alpha, beta, false, aiColor, GetOpponentColor(currentColor));
-                    int score = result.bestScore;
-
-                    if (score > maxScore)
-                    {
-                        maxScore = score;
-                        bestMove = (move.startRow, move.startCol, move.endRow, move.endCol, move.promotionPiece);
-                    }
-
-                    alpha = Math.Max(alpha, score);
-                    if (beta <= alpha)
-                        break;
+                    if (score > maxScore) { maxScore = score; bestMove = (move.startRow, move.startCol, move.endRow, move.endCol, move.promotionPiece); }
+                    alpha = Math.Max(alpha, maxScore);
+                    if (beta <= alpha) break;
                 }
-
                 return (bestMove, maxScore);
             }
             else
@@ -116,34 +174,34 @@ namespace ChessGame
                 int minScore = int.MaxValue;
                 (int, int, int, int, PieceType)? bestMove = null;
 
-                foreach (var move in moves)
+                foreach (var move in ordered)
                 {
-                    Board newBoard = new Board(board);
-                    Piece movedPiece = newBoard.Squares[move.startRow, move.startCol];
+                    Board nb = new Board(board);
+                    ApplyMoveToBoard(nb, move.startRow, move.startCol, move.endRow, move.endCol, move.promotionPiece, currentColor);
+                    int score = Minimax(nb, depth - 1, alpha, beta, true, aiColor, GetOpponentColor(currentColor)).bestScore;
 
-                    newBoard.Squares[move.endRow, move.endCol] = movedPiece;
-                    newBoard.Squares[move.startRow, move.startCol] = null;
-                    movedPiece.HasMoved = true;
-
-                    if (move.promotionPiece != PieceType.None)
-                        newBoard.Squares[move.endRow, move.endCol] = new Piece(move.promotionPiece, currentColor);
-
-                    var result = Minimax(newBoard, depth - 1, alpha, beta, true, aiColor, GetOpponentColor(currentColor));
-                    int score = result.bestScore;
-
-                    if (score < minScore)
-                    {
-                        minScore = score;
-                        bestMove = (move.startRow, move.startCol, move.endRow, move.endCol, move.promotionPiece);
-                    }
-
-                    beta = Math.Min(beta, score);
-                    if (beta <= alpha)
-                        break;
+                    if (score < minScore) { minScore = score; bestMove = (move.startRow, move.startCol, move.endRow, move.endCol, move.promotionPiece); }
+                    beta = Math.Min(beta, minScore);
+                    if (beta <= alpha) break;
                 }
-
                 return (bestMove, minScore);
             }
+        }
+
+        private List<(int startRow, int startCol, int endRow, int endCol, PieceType promotionPiece, Piece movedPiece)> OrderMoves(
+            Board board,
+            List<(int startRow, int startCol, int endRow, int endCol, PieceType promotionPiece, Piece movedPiece)> moves)
+        {
+            return moves.OrderByDescending(m =>
+            {
+                int score = 0;
+                Piece victim = board.Squares[m.endRow, m.endCol];
+                if (victim != null)
+                    score += GetPieceValue(victim.Type) * 10 - GetPieceValue(m.movedPiece.Type);
+                if (m.promotionPiece != PieceType.None)
+                    score += GetPieceValue(m.promotionPiece);
+                return score;
+            }).ToList();
         }
 
         private int EvaluateBoard(Board board, PieceColor aiColor)
@@ -155,74 +213,78 @@ namespace ChessGame
                 for (int col = 0; col < 8; col++)
                 {
                     Piece piece = board.Squares[row, col];
-                    if (piece != null)
-                    {
-                        int pieceValue = GetPieceValue(piece.Type);
-                        int positionBonus = GetPositionBonus(board, piece.Type, piece.Color, row, col);
+                    if (piece == null) continue;
 
-                        if (piece.Color == aiColor)
-                            score += pieceValue + positionBonus;
-                        else
-                            score -= pieceValue + positionBonus;
-                    }
+                    int value = GetPieceValue(piece.Type) + GetPositionBonus(piece.Type, piece.Color, row, col);
+                    score += piece.Color == aiColor ? value : -value;
                 }
             }
 
-            var validator = new MoveValidator(board);
-            if (validator.IsKingInCheck(aiColor) && !validator.HasAnyLegalMove(aiColor))
-                score -= 1000;
-            if (validator.IsKingInCheck(GetOpponentColor(aiColor)) && !validator.HasAnyLegalMove(GetOpponentColor(aiColor)))
-                score += 1000;
-
-            string boardHash = GetBoardHash(board);
-            if (positionHistory.ContainsKey(boardHash))
-                score += positionHistory[boardHash];
+            string hash = GetBoardHash(board);
+            if (positionHistory.TryGetValue(hash, out int visits))
+                score -= visits * 30;
 
             return score;
         }
 
-        private int GetPositionBonus(Board board, PieceType type, PieceColor color, int row, int col)
+        private int GetPositionBonus(PieceType type, PieceColor color, int row, int col)
         {
-            int centerBonus = 0;
-            if ((row == 3 || row == 4) && (col == 3 || col == 4))
-                centerBonus = 10;
-            else if ((row >= 2 && row <= 5) && (col >= 2 && col <= 5))
-                centerBonus = 5;
-
-            int pawnBonus = 0;
-            if (type == PieceType.Pawn)
+            int r = color == PieceColor.White ? row : 7 - row; // mirror for Black
+            return type switch
             {
-                int advance = color == PieceColor.White ? 7 - row : row;
-                pawnBonus = advance * 2;
-            }
+                PieceType.Pawn   => PawnTable[r, col],
+                PieceType.Knight => KnightTable[r, col],
+                PieceType.Bishop => BishopTable[r, col],
+                PieceType.Rook   => RookTable[r, col],
+                PieceType.Queen  => QueenTable[r, col],
+                PieceType.King   => KingTable[r, col],
+                _ => 0
+            };
+        }
 
-            int developmentBonus = 0;
-            if ((type == PieceType.Knight || type == PieceType.Bishop))
-            {
-                if ((color == PieceColor.White && row < 7) || (color == PieceColor.Black && row > 0))
-                    developmentBonus = 5;
-                else
-                    developmentBonus = -2;
-            }
+        private void ApplyMoveToBoard(Board nb, int startRow, int startCol, int endRow, int endCol, PieceType promotionPiece, PieceColor color)
+        {
+            Piece movedPiece = nb.Squares[startRow, startCol];
 
-            int rookBonus = 0;
-            if (type == PieceType.Rook)
+            if (movedPiece.Type == PieceType.Pawn && Math.Abs(endCol - startCol) == 1 && nb.Squares[endRow, endCol] == null)
             {
-                bool hasPawnsInColumn = false;
-                for (int r = 0; r < 8; r++)
+                if (nb.EnPassantRow.HasValue && nb.EnPassantCol.HasValue &&
+                    endRow == nb.EnPassantRow.Value && endCol == nb.EnPassantCol.Value)
                 {
-                    Piece p = board.Squares[r, col];
-                    if (p != null && p.Type == PieceType.Pawn && p.Color == color)
-                    {
-                        hasPawnsInColumn = true;
-                        break;
-                    }
+                    int dir = color == PieceColor.White ? -1 : 1;
+                    nb.Squares[endRow - dir, endCol] = null;
                 }
-                if (!hasPawnsInColumn)
-                    rookBonus = 10;
             }
 
-            return centerBonus + pawnBonus + developmentBonus + rookBonus;
+            nb.Squares[endRow, endCol] = movedPiece;
+            nb.Squares[startRow, startCol] = null;
+            movedPiece.HasMoved = true;
+
+            if (movedPiece.Type == PieceType.King && Math.Abs(endCol - startCol) == 2)
+            {
+                int rSrc = endCol > startCol ? 7 : 0;
+                int rDst = endCol > startCol ? 5 : 3;
+                Piece rook = nb.Squares[startRow, rSrc];
+                if (rook != null)
+                {
+                    nb.Squares[startRow, rDst] = rook;
+                    nb.Squares[startRow, rSrc] = null;
+                    rook.HasMoved = true;
+                }
+            }
+
+            if (promotionPiece != PieceType.None)
+                nb.Squares[endRow, endCol] = new Piece(promotionPiece, color);
+
+            if (movedPiece.Type == PieceType.Pawn && Math.Abs(endRow - startRow) == 2)
+            {
+                int dir = color == PieceColor.White ? -1 : 1;
+                nb.SetEnPassant(startRow + dir, startCol, color);
+            }
+            else
+            {
+                nb.ClearEnPassant();
+            }
         }
 
         private List<(int startRow, int startCol, int endRow, int endCol, PieceType promotionPiece, Piece movedPiece)> GetAllValidMoves(Board board, PieceColor color)
@@ -230,64 +292,45 @@ namespace ChessGame
             var moves = new List<(int, int, int, int, PieceType, Piece)>();
             var validator = new MoveValidator(board);
 
-            for (int startRow = 0; startRow < 8; startRow++)
-            {
-                for (int startCol = 0; startCol < 8; startCol++)
+            for (int sr = 0; sr < 8; sr++)
+                for (int sc = 0; sc < 8; sc++)
                 {
-                    Piece piece = board.Squares[startRow, startCol];
-                    if (piece != null && piece.Color == color)
-                    {
-                        for (int endRow = 0; endRow < 8; endRow++)
-                        {
-                            for (int endCol = 0; endCol < 8; endCol++)
-                            {
-                                if (validator.IsValidMove(startRow, startCol, endRow, endCol, color, out PieceType promotionPiece))
-                                {
-                                    moves.Add((startRow, startCol, endRow, endCol, promotionPiece, piece));
-                                }
-                            }
-                        }
-                    }
+                    Piece piece = board.Squares[sr, sc];
+                    if (piece == null || piece.Color != color) continue;
+
+                    for (int er = 0; er < 8; er++)
+                        for (int ec = 0; ec < 8; ec++)
+                            if (validator.IsValidMove(sr, sc, er, ec, color, out PieceType promo))
+                                moves.Add((sr, sc, er, ec, promo, piece));
                 }
-            }
+
             return moves;
         }
 
+        private int GetPieceValue(PieceType type) => type switch
+        {
+            PieceType.Pawn   => PawnValue,
+            PieceType.Knight => KnightValue,
+            PieceType.Bishop => BishopValue,
+            PieceType.Rook   => RookValue,
+            PieceType.Queen  => QueenValue,
+            PieceType.King   => KingValue,
+            _ => 0
+        };
+
         private string GetBoardHash(Board board)
         {
-            string hash = "";
-            for (int row = 0; row < 8; row++)
-                for (int col = 0; col < 8; col++)
+            var sb = new System.Text.StringBuilder(128);
+            for (int r = 0; r < 8; r++)
+                for (int c = 0; c < 8; c++)
                 {
-                    Piece p = board.Squares[row, col];
-                    hash += p == null ? "." : $"{p.Type}{p.Color}";
+                    Piece p = board.Squares[r, c];
+                    sb.Append(p == null ? '.' : (char)((int)p.Type * 2 + (int)p.Color));
                 }
-            return hash;
+            return sb.ToString();
         }
 
-        private PieceColor GetOpponentColor(PieceColor color)
-        {
-            return color == PieceColor.White ? PieceColor.Black : PieceColor.White;
-        }
-
-        private int GetPieceValue(PieceType type)
-        {
-            return type switch
-            {
-                PieceType.Pawn => 10,
-                PieceType.Knight => 30,
-                PieceType.Bishop => 30,
-                PieceType.Rook => 50,
-                PieceType.Queen => 90,
-                PieceType.King => 900,
-                _ => 0
-            };
-        }
-
-        public void SetDifficulty(DifficultyLevel difficulty)
-        {
-            currentDifficulty = difficulty;
-            consecutiveWins = 0; 
-        }
+        private PieceColor GetOpponentColor(PieceColor color) =>
+            color == PieceColor.White ? PieceColor.Black : PieceColor.White;
     }
 }

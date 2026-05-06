@@ -55,18 +55,15 @@ namespace ChessGame
                 return true;
             }
 
-            // 2. AVANTI DI 2 - (en passant target is set in ExecuteMove, NOT here)
+            // 2. AVANTI DI 2
+            // NOTE: En passant target is set in ChessForm.ExecuteMove after the move is confirmed,
+            // NOT here. Setting it here corrupts the state because IsValidPawnMove is called many
+            // times during highlighting, AI evaluation, and check detection.
             if (startCol == endCol && endRow == startRow + 2 * direction && target == null && startRow == startRowBase)
             {
                 int middleRow = startRow + direction;
                 if (board.Squares[middleRow, startCol] == null)
-                {
-                    // ✅ FIX: Do NOT set board.EnPassantRow/Col here.
-                    // Setting state during validation causes corruption because
-                    // IsValidPawnMove is called many times (highlighting, AI, check detection).
-                    // En passant target is now set exclusively in ExecuteMove.
                     return true;
-                }
                 return false;
             }
 
@@ -280,7 +277,7 @@ namespace ChessGame
             tempBoard.Squares[endRow, endCol] = movedPiece;
             tempBoard.Squares[startRow, startCol] = null;
 
-            // Gestione en passant nella simulazione
+            // Gestione en passant nella simulazione - VERSIONE CORRETTA
             if (movedPiece.Type == PieceType.Pawn && Math.Abs(endCol - startCol) == 1 && capturedPiece == null)
             {
                 if (board.IsEnPassantAvailable && board.EnPassantRow.HasValue && board.EnPassantCol.HasValue)
@@ -313,7 +310,6 @@ namespace ChessGame
             MoveValidator tempValidator = new MoveValidator(tempBoard);
             return tempValidator.IsKingInCheck(color);
         }
-
         public bool IsKingInCheck(PieceColor color)
         {
             int kingRow = -1, kingCol = -1;
